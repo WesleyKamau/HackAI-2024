@@ -1,7 +1,10 @@
 
-def styleSwap(content_image_url,style_image_url):
+def styleSwap(content_image_url,style_image_url,scale):
     import os
     import tensorflow as tf
+    tf.keras.backend.clear_session()
+    import os
+    os.environ['CUDA_VISIBLE_DEVICES'] = "0"
     # Load compressed models from tensorflow_hub
     os.environ['TFHUB_MODEL_LOAD_FORMAT'] = 'COMPRESSED'
 
@@ -28,8 +31,8 @@ def styleSwap(content_image_url,style_image_url):
     content_path = tf.keras.utils.get_file(origin=content_image_url)
     style_path = tf.keras.utils.get_file(origin=style_image_url)
 
-    def load_img(path_to_img):
-        max_dim = 512
+    def load_img(path_to_img,size):
+        max_dim = size
         img = tf.io.read_file(path_to_img)
         img = tf.image.decode_image(img, channels=3)
         img = tf.image.convert_image_dtype(img, tf.float32)
@@ -38,6 +41,7 @@ def styleSwap(content_image_url,style_image_url):
         long_dim = max(shape)
         scale = max_dim / long_dim
 
+        print(shape*scale)
         new_shape = tf.cast(shape * scale, tf.int32)
 
         img = tf.image.resize(img, new_shape)
@@ -52,8 +56,9 @@ def styleSwap(content_image_url,style_image_url):
         if title:
             plt.title(title)
 
-    content_image = load_img(content_path)
-    style_image = load_img(style_path)
+    content_image = load_img(content_path,scale)
+    style_image = load_img(style_path,scale)
+
 
     plt.subplot(1, 2, 1)
     imshow(content_image, 'Content Image')
@@ -184,7 +189,7 @@ def styleSwap(content_image_url,style_image_url):
     opt = tf.keras.optimizers.Adam(learning_rate=0.02, beta_1=0.99, epsilon=1e-1)
 
     style_weight=1e-1
-    content_weight=1e2
+    content_weight=1e4
 
     def style_content_loss(outputs):
         style_outputs = outputs['style']
@@ -217,7 +222,7 @@ def styleSwap(content_image_url,style_image_url):
     import time
     start = time.time()
 
-    epochs = 1
+    epochs = 10
     steps_per_epoch = 100
 
     step = 0
@@ -275,7 +280,7 @@ def styleSwap(content_image_url,style_image_url):
 
     tf.image.total_variation(image).numpy()
 
-    total_variation_weight=30
+    total_variation_weight=60
 
     @tf.function()
     def train_step(image):
@@ -294,7 +299,7 @@ def styleSwap(content_image_url,style_image_url):
     import time
     start = time.time()
 
-    epochs = 1
+    epochs = 10
     steps_per_epoch = 100
 
     step = 0
@@ -311,6 +316,7 @@ def styleSwap(content_image_url,style_image_url):
     print("Total time: {:.1f}".format(end-start))
 
     mpl.pyplot.close()
+    tf.keras.backend.clear_session()
 
     # file_name = 'stylized-image.png'
     # tensor_to_image(image).save(file_name)
@@ -329,6 +335,8 @@ from PIL import Image
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 import requests
+import os
+
 
 
 client_id = "702428c1f47241b7b19f4c718ac63cdf"
@@ -339,7 +347,8 @@ client_credentials_manager = SpotifyClientCredentials(client_id=client_id, clien
 sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
 
 # Search for the artist
-artist = input("Enter the name of the artist: ")
+# artist = input("Enter the name of the artist: ")
+artist = "Taylor Swift"
 results = sp.search(q='artist:' + artist, type='artist')
 items = results['artists']['items']
 
@@ -348,32 +357,83 @@ artist_id = artist['id']
     
 # Get the artist's albums
 albums = sp.artist_albums(artist_id, album_type='album')
+print(albums)
     
-# Extract album covers
-album_covers = [album['images'][0]['url'] for album in albums['items']]
-    
-scale = 1500//len(album_covers)
+# Assuming you have the album_covers array and the albums data
+
+# Filter out albums that do not have "deluxe" in their titles
+filtered_albums = [album for album in albums['items'] if 'deluxe' not in album['name'].lower()]
+
+# Now, extract the album covers for the filtered albums
+album_covers = [album['images'][0]['url'] for album in filtered_albums]
+
+xmin = 0
+ymin = 0
+resume = "Y"
+
+if os.path.exists('xy_values.txt'):
+    while (resume != "Y" and resume != "N"):
+        print("lol")
+        # resume = input("Would you like to resume from the last saved image? (Y/N): ")
+
+    if resume == "Y":
+        with open('xy_values.txt', 'r') as file:
+            line = file.readline()
+            parts = line.split(',')
+
+            # Extract x and y values
+            xmin = parts[0].split(': ')[1]
+            ymin = parts[1].split(': ')[1]
+
+            print(f'xmin: {xmin}, ymin: {ymin}')
+
+scale = 3000//len(album_covers)
 
 img_dimension = scale*len(album_covers)
-new = Image.new("RGBA", (img_dimension,img_dimension))
+if xmin == 0 and ymin == 0:
+    new = Image.new("RGBA", (img_dimension,img_dimension))
 
-## Rows are the source
-## Columns are the style
+    ## Rows are the source
+    ## Columns are the style
+    new.save("current-grid.png")
+    del new
 
-for x in range(2):
-    for y in range(2):
-        if x == y:
-            r = requests.get(album_covers[x], stream=True)
-            print(album_covers[x])
-            img = Image.open(r.raw)
-        else:
-            img = styleSwap(album_covers[x], album_covers[y])
-        img = img.resize((scale,scale))
-        new.paste(img, (scale*x,scale*y))
+founditem = False
+for x in range(len(album_covers)):
+    for y in range(len(album_covers)):
+        if x>=int(xmin) and y>=int(ymin):
+            founditem = True
+            if x == y:
+                r = requests.get(album_covers[x], stream=True)
+                print(album_covers[x])
+                img = Image.open(r.raw)
+                del r
+            else:
+                img = styleSwap(album_covers[x], album_covers[y],scale)
+            img = img.resize((scale,scale))
+            new=Image.open("current-grid.png")
+            new.paste(img, (scale*x,scale*y))
+            new.save("current-grid.png")
+            # Open the file in write mode, which clears it
+            with open('xy_values.txt', 'w'):
+                pass
+            with open('xy_values.txt', 'a') as file:
+                file.write(f'x: {x}, y: {y}')
+            del new
+            del img
+    if founditem:
+        ymin = 0
+
+
+# Specify the file path
+file_path = 'xy_values.txt'
+
+# Check if the file exists and delete it
+if os.path.exists(file_path):
+    os.remove(file_path)
+else:
+    print(f"The file {file_path} does not exist")  
             
-
-    
-new.save("current-grid.png")
 
 # new = Image.new("RGBA", (1000,1000))
 # img = Image.open("images.jpg")
