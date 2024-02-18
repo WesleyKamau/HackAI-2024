@@ -1,5 +1,5 @@
 
-def styleSwap(content_image_url,style_image_url,scale):
+def styleSwap(content_image_url,style_image_url,scale,epochs):
     import os
     import tensorflow as tf
     tf.keras.backend.clear_session()
@@ -41,7 +41,7 @@ def styleSwap(content_image_url,style_image_url,scale):
         long_dim = max(shape)
         scale = max_dim / long_dim
 
-        print(shape*scale)
+        # print(shape*scale)
         new_shape = tf.cast(shape * scale, tf.int32)
 
         img = tf.image.resize(img, new_shape)
@@ -81,9 +81,9 @@ def styleSwap(content_image_url,style_image_url,scale):
 
     vgg = tf.keras.applications.VGG19(include_top=False, weights='imagenet')
 
-    print()
-    for layer in vgg.layers:
-        print(layer.name)
+    # print()
+    # for layer in vgg.layers:
+    #     # print(layer.name)
 
 
     content_layers = ['block5_conv2'] 
@@ -111,14 +111,14 @@ def styleSwap(content_image_url,style_image_url,scale):
     style_extractor = vgg_layers(style_layers)
     style_outputs = style_extractor(style_image*255)
 
-    #Look at the statistics of each layer's output
-    for name, output in zip(style_layers, style_outputs):
-        print(name)
-        print("  shape: ", output.numpy().shape)
-        print("  min: ", output.numpy().min())
-        print("  max: ", output.numpy().max())
-        print("  mean: ", output.numpy().mean())
-        print()
+    # #Look at the statistics of each layer's output
+    # for name, output in zip(style_layers, style_outputs):
+    #     # print(name)
+    #     # print("  shape: ", output.numpy().shape)
+    #     # print("  min: ", output.numpy().min())
+    #     # print("  max: ", output.numpy().max())
+    #     # print("  mean: ", output.numpy().mean())
+    #     # print()
 
     def gram_matrix(input_tensor):
         result = tf.linalg.einsum('bijc,bijd->bcd', input_tensor, input_tensor)
@@ -161,22 +161,22 @@ def styleSwap(content_image_url,style_image_url,scale):
 
     results = extractor(tf.constant(content_image))
 
-    print('Styles:')
-    for name, output in sorted(results['style'].items()):
-        print("  ", name)
-        print("    shape: ", output.numpy().shape)
-        print("    min: ", output.numpy().min())
-        print("    max: ", output.numpy().max())
-        print("    mean: ", output.numpy().mean())
-        print()
+    # # print('Styles:')
+    # for name, output in sorted(results['style'].items()):
+    #     # print("  ", name)
+    #     # print("    shape: ", output.numpy().shape)
+    #     # print("    min: ", output.numpy().min())
+    #     # print("    max: ", output.numpy().max())
+    #     # print("    mean: ", output.numpy().mean())
+    #     # print()
 
-    print("Contents:")
-    for name, output in sorted(results['content'].items()):
-        print("  ", name)
-        print("    shape: ", output.numpy().shape)
-        print("    min: ", output.numpy().min())
-        print("    max: ", output.numpy().max())
-        print("    mean: ", output.numpy().mean())
+    # print("Contents:")
+    # for name, output in sorted(results['content'].items()):
+    #     print("  ", name)
+    #     print("    shape: ", output.numpy().shape)
+    #     print("    min: ", output.numpy().min())
+    #     print("    max: ", output.numpy().max())
+    #     print("    mean: ", output.numpy().mean())
 
     style_targets = extractor(style_image)['style']
     content_targets = extractor(content_image)['content']
@@ -222,7 +222,7 @@ def styleSwap(content_image_url,style_image_url,scale):
     import time
     start = time.time()
 
-    epochs = 10
+    # epochs = 1
     steps_per_epoch = 100
 
     step = 0
@@ -230,13 +230,13 @@ def styleSwap(content_image_url,style_image_url,scale):
         for m in range(steps_per_epoch):
             step += 1
             train_step(image)
-            print(".", end='', flush=True)
+            # print(".", end='', flush=True)
         display.clear_output(wait=True)
         display.display(tensor_to_image(image))
-        print("Train step: {}".format(step))
+        # print("Train step: {}".format(step))
     
     end = time.time()
-    print("Total time: {:.1f}".format(end-start))
+    # print("Total time: {:.1f}".format(end-start))
 
     def high_pass_x_y(image):
         x_var = image[:, :, 1:, :] - image[:, :, :-1, :]
@@ -299,7 +299,7 @@ def styleSwap(content_image_url,style_image_url,scale):
     import time
     start = time.time()
 
-    epochs = 10
+    # epochs = 1
     steps_per_epoch = 100
 
     step = 0
@@ -307,13 +307,13 @@ def styleSwap(content_image_url,style_image_url,scale):
         for m in range(steps_per_epoch):
             step += 1
             train_step(image)
-            print(".", end='', flush=True)
+            # print(".", end='', flush=True)
         display.clear_output(wait=True)
         display.display(tensor_to_image(image))
-        print("Train step: {}".format(step))
+        # print("Train step: {}".format(step))
 
     end = time.time()
-    print("Total time: {:.1f}".format(end-start))
+    # print("Total time: {:.1f}".format(end-start))
 
     mpl.pyplot.close()
     tf.keras.backend.clear_session()
@@ -347,8 +347,7 @@ client_credentials_manager = SpotifyClientCredentials(client_id=client_id, clien
 sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
 
 # Search for the artist
-# artist = input("Enter the name of the artist: ")
-artist = "Taylor Swift"
+artist = input("Enter the name of the artist: ")
 results = sp.search(q='artist:' + artist, type='artist')
 items = results['artists']['items']
 
@@ -357,7 +356,7 @@ artist_id = artist['id']
     
 # Get the artist's albums
 albums = sp.artist_albums(artist_id, album_type='album')
-print(albums)
+# print(albums)
     
 # Assuming you have the album_covers array and the albums data
 
@@ -369,12 +368,11 @@ album_covers = [album['images'][0]['url'] for album in filtered_albums]
 
 xmin = 0
 ymin = 0
-resume = "Y"
+resume = "b"
 
 if os.path.exists('xy_values.txt'):
     while (resume != "Y" and resume != "N"):
-        print("lol")
-        # resume = input("Would you like to resume from the last saved image? (Y/N): ")
+        resume = input("Would you like to resume from the last saved image? (Y/N): ")
 
     if resume == "Y":
         with open('xy_values.txt', 'r') as file:
@@ -387,7 +385,7 @@ if os.path.exists('xy_values.txt'):
 
             print(f'xmin: {xmin}, ymin: {ymin}')
 
-scale = 3000//len(album_covers)
+scale = int(input("Input the image size: "))//len(album_covers)
 
 img_dimension = scale*len(album_covers)
 if xmin == 0 and ymin == 0:
@@ -398,6 +396,8 @@ if xmin == 0 and ymin == 0:
     new.save("current-grid.png")
     del new
 
+epochs = int(input("Input the number of epochs (1 for low quality, 10 for high): "))
+
 founditem = False
 for x in range(len(album_covers)):
     for y in range(len(album_covers)):
@@ -405,11 +405,10 @@ for x in range(len(album_covers)):
             founditem = True
             if x == y:
                 r = requests.get(album_covers[x], stream=True)
-                print(album_covers[x])
                 img = Image.open(r.raw)
                 del r
             else:
-                img = styleSwap(album_covers[x], album_covers[y],scale)
+                img = styleSwap(album_covers[x], album_covers[y],scale,epochs)
             img = img.resize((scale,scale))
             new=Image.open("current-grid.png")
             new.paste(img, (scale*x,scale*y))
@@ -421,6 +420,7 @@ for x in range(len(album_covers)):
                 file.write(f'x: {x}, y: {y}')
             del new
             del img
+            print(f'x: {x}, y: {y} added')
     if founditem:
         ymin = 0
 
